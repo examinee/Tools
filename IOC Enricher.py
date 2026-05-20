@@ -15,7 +15,7 @@ def get_api_key():
     key= os.getenv('VT_API_KEY')
     if not key:
         print("[ERROR] 환경 변수 'VT_API_KEY'가 설정되지 않았습니다.")
-        return 0
+        exit(1)
     return key
 key = get_api_key()
 
@@ -48,6 +48,8 @@ def request_domain(domain):
     headers = {"x-apikey": key}
     try:
         response = requests.get(url, headers=headers, timeout=30)
+        response.raise_for_status()
+        return response
     except requests.exceptions.Timeout:
         print(f"[ERROR] {domain}: 요청 타임아웃")
         return None
@@ -57,7 +59,6 @@ def request_domain(domain):
     except requests.exceptions.RequestException as e:
         print(f"[ERROR] {domain}: {e}")
         return None
-    return response
 
 
 
