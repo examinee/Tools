@@ -104,6 +104,7 @@ if __name__ == "__main__":
         response = request_domain(domain)
         if response:
             result.append(data_analysis(response.json()))
+            print(f"{domain} DONE!")
         time.sleep(15)
     if result:
         save_json(result, 'c2_output_file.json')
