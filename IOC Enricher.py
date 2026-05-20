@@ -101,11 +101,8 @@ if __name__ == "__main__":
     for domain in domain_extraction(args.files):
         print(f"Checking domain: {domain}")
         response = request_domain(domain)
-        if response.status_code == 200:
+        if response:
             result.append(data_analysis(response.json()))
-            print(f" {domain} [DONE]")
-        else:
-            print(f"[ERROR] {domain}: HTTP {response.status_code}")
         time.sleep(15)
     if result:
         save_json(result, 'c2_output_file.json')
