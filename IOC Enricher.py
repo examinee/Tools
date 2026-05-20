@@ -4,24 +4,63 @@ from datetime import datetime
 import argparse
 import time
 import csv
-API_KEY = "your_api_key_here"
+import os
+import re
+
+DOMAIN_PATTERN = re.compile(
+    r'^(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.[A-Za-z0-9-]{1,63})*\.[A-Za-z]{2,}$'
+)
+MAX_DOMAIN_LENGTH = 253
+def get_api_key():
+    key= os.getenv('VT_API_KEY')
+    if not key:
+        print("[ERROR] 환경 변수 'VT_API_KEY'가 설정되지 않았습니다.")
+        return 0
+    return key
+key = get_api_key()
 
 def domain_extraction(file_path):
     domains = []
-    with open(file_path, 'r') as f:
-        domain_data = f.read()
+    invalid_domains = []
+    try:
+        with open(file_path, 'r') as f:
+            domain_data = f.read()
+    except FileNotFoundError:
+        print(f"[ERROR] 파일을 찾을 수 없습니다: {file_path}")
+    except PermissionError:
+        print(f"[ERROR] 파일 읽기 권한이 없습니다: {file_path}")
+    else:
         for d in domain_data.split(','):
             d = d.strip()
-            if d:
+            if not d:
+                continue
+            if DOMAIN_PATTERN.match(d) and len(d) <= MAX_DOMAIN_LENGTH:
                 domains.append(d)
+            else:
+                invalid_domains.append(d)
+        if invalid_domains:
+            print(f"[WARNING] 유효하지 않은 도메인: {', '.join(invalid_domains)}")
     return domains
 
 
 def request_domain(domain):
     url = f"https://www.virustotal.com/api/v3/domains/{domain}"
-    headers = {"x-apikey": API_KEY}
-    response = requests.get(url, headers=headers)
+    headers = {"x-apikey": key}
+    try:
+        response = requests.get(url, headers=headers, timeout=30)
+    except requests.exceptions.Timeout:
+        print(f"[ERROR] {domain}: 요청 타임아웃")
+        return None
+    except requests.exceptions.HTTPError as e:
+        print(f"[ERROR] {domain}: HTTP {e.response.status_code}")
+        return None
+    except requests.exceptions.RequestException as e:
+        print(f"[ERROR] {domain}: {e}")
+        return None
     return response
+
+
+
 def data_analysis(data):
     ip_list = []
     for r in data['data']['attributes'].get('last_dns_records', []):
@@ -41,6 +80,8 @@ def save_json(data, output_path):
         json.dump(data, f, indent=4)
         
 def save_csv(data, output_path):
+    if not data:
+        return
     rows = []
     for r in data:
         row = r.copy()
