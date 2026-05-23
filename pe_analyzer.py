@@ -32,9 +32,21 @@ def calc_entropy(data):
 
 
 def get_file_info(file_path):
-    with open(file_path, 'rb') as f:
-        data = f.read()
-    pe = pefile.PE(file_path)
+    try:
+        with open(file_path, 'rb') as f:
+            data = f.read()
+    except FileNotFoundError:
+        print(f"[ERROR] 파일을 찾을 수 없습니다: {file_path}")
+        exit(1)
+    except PermissionError:
+        print(f"[ERROR] 파일 읽기 권한이 없습니다: {file_path}")
+        exit(1)
+    else:
+        try:
+            pe = pefile.PE(file_path)
+        except pefile.PEFormatError:
+            print(f"[ERROR] 유효한 PE 파일이 아닙니다: {file_path}")
+            exit(1)
     md5 = hashlib.md5(data).hexdigest()
     sha256 = hashlib.sha256(data).hexdigest()
     sha1 = hashlib.sha1(data).hexdigest()
